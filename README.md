@@ -4,6 +4,8 @@
 
 ### Goal
 
+apt install glibc-doc
+
 
 ### Background
 - *Shell* is a program that interpretes user inputs, and processes them accordingly. The example includes the Command Prompt in Windows, Bourne Shell in Linux, so forth.

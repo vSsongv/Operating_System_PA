@@ -25,6 +25,7 @@ enum generator_types {
 };
 
 int spawn_generators(const enum generator_types, const int nr_generators, const unsigned long nr_generate);
+void do_generate(int []);
 void fini_generators(void);
 
 #endif

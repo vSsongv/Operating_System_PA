@@ -26,6 +26,13 @@
 #include "generator.h"
 #include "counter.h"
 
+
+/*************************************************
+ * Lock tester.
+ * Will be invoked if the program is run with -T
+ */
+void test_lock(void);
+
 /* Common */
 int verbose = 1;
 
@@ -134,6 +141,8 @@ int parse_options(int argc, char * const argv[])
 int main(int argc, char * const argv[])
 {
 	int retval = EXIT_SUCCESS;
+	int generated_values[MAX_VALUE] = {0};
+	int counted_values[MAX_VALUE] = {0};
 
 	system("rm -f GEN* RESULT*");
 
@@ -149,6 +158,8 @@ int main(int argc, char * const argv[])
 	}
 
 	spawn_generators(generator_type, nr_generators, nr_generate);
+
+	do_generate(generated_values);
 
 	fini_generators();
 	fini_counter();

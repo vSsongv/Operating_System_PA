@@ -42,10 +42,4 @@ void init_semaphore(struct semaphore *, const int);
 void wait_semaphore(struct semaphore *);
 void signal_semaphore(struct semaphore *);
 
-
-/*************************************************
- * Lock tester.
- * Will be invoked if the program is run with -T
- */
-void test_lock(void);
 #endif

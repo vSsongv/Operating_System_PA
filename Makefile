@@ -10,7 +10,7 @@ HEADERS=$(wildcard ./*.h)
 .PHONY: all
 all: lock
 
-lock: pa3.o main.o generator.o counter.o
+lock: pa3.o main.o generator.o counter.o tester.o
 	gcc $(LDFLAGS) $^ -o $@
 
 %.o: %.c $(HEADERS)

@@ -28,7 +28,7 @@
 static int nr_generators = 0;
 static unsigned long nr_generate = 0;
 
-static int running = 0;
+static pthread_barrier_t barrier;
 
 /* Generator functions */
 int generator_fn_constant(int tid)
@@ -86,7 +86,9 @@ void *generator_main(void *_args_)
 		printf("Generator %d started...\n", my->tid);
 	}
 
-	for (i = 0; i < nr_generate && running; i++) {
+	pthread_barrier_wait(&barrier);
+
+	for (i = 0; i < nr_generate; i++) {
 		value = my->generator_fn(my->tid);
 
 		enqueue_ringbuffer((int)value);
@@ -100,6 +102,9 @@ void *generator_main(void *_args_)
 	if (verbose) {
 		printf("Generator %d finished...\n", my->tid);
 	}
+	pthread_barrier_wait(&barrier);
+	/* Wait for the generated values are collected */
+	pthread_barrier_wait(&barrier);
 
 	return 0;
 }
@@ -118,14 +123,51 @@ int spawn_generators(const enum generator_types type, const int _nr_generators_,
 	assert(generators);
 	bzero(generators, sizeof(*generators) * nr_generators);
 
-	running = 1;
+	pthread_barrier_init(&barrier, NULL, nr_generators + 1);
+
 	for (i = 0; i < nr_generators; i++) {
 		struct generator *g = generators + i;
 		g->tid = i;
 		g->generator_fn = assign_generator_fn(type, i);
 		pthread_create(&g->thread, NULL, generator_main, g);
 	}
+
+	pthread_barrier_wait(&barrier);
+
 	return 0;
+}
+
+void do_generate(int values[])
+{
+	pthread_barrier_wait(&barrier);
+
+	/* Collect generation result */
+	for (int i = 0; i < nr_generators; i++) {
+		struct generator *g = generators + i;
+		for (int n = MIN_VALUE; n < MAX_VALUE; n++) {
+			values[n] += g->generated[n];
+		}
+	}
+
+	for (int n = MIN_VALUE; n < MAX_VALUE; n++) {
+		if (!values[n]) continue;
+		printf("%d  %d\n", n, values[n]);
+	}
+
+	pthread_barrier_wait(&barrier);
+}
+
+void fini_generators(void)
+{
+	int i;
+
+	for (i = 0; i < nr_generators; i++) {
+		struct generator *g = generators + i;
+		if ((unsigned long)(g->thread) != 0) {
+			pthread_join(g->thread, NULL);
+		}
+	}
+	free(generators);
 }
 
 void dump_generation_result(const struct generator *g)
@@ -143,19 +185,4 @@ void dump_generation_result(const struct generator *g)
 		fprintf(fp, "%d %lu\n", value, g->generated[value]);
 	}
 	fclose(fp);
-}
-
-
-void fini_generators(void)
-{
-	int i;
-	if (running) {
-		for (i = 0; i < nr_generators; i++) {
-			struct generator *g = generators + i;
-			if ((unsigned long)(g->thread) != 0) {
-				pthread_join(g->thread, NULL);
-			}
-		}
-		free(generators);
-	}
 }

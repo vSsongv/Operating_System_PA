@@ -23,56 +23,28 @@
 #include "counter.h"
 
 static unsigned long nr_requests = 0;
-static pthread_t counter_thread;
-static unsigned long occurrances[MAX_VALUE] = { 0 };
+static pthread_t counter_thread = 0;
+static unsigned long value_counter[MAX_VALUE] = { 0 };
+static unsigned long print_interval = 100000;
 
-static int __initialized = 0;
 static int delayed = 0;
-
-static void dump_counting_result(void)
-{
-	int i;
-	unsigned long nr = 0;
-	FILE *fp = fopen(COUNTER_FILENAME, "w");
-	assert(fp);
-	
-	if (verbose) {
-		printf("Occurrances ------\n");
-	}
-	for (i = MIN_VALUE; i < MAX_VALUE; i++) {
-		if (occurrances[i] == 0) continue;
-
-		if (verbose) {
-			printf("    %3d : %lu\n", i, occurrances[i]);
-		}		
-		fprintf(fp, "%d %lu\n", i, occurrances[i]);
-		nr += occurrances[i];
-	}
-	if (verbose) {
-		printf("  Total : %lu\n", nr);
-	}
-
-	if (fp) {
-		fclose(fp);
-	}
-}
 
 void *counter_main(void *_args_)
 {
 	unsigned long i;
 
 	if (verbose) {
-		printf("Counting %lu numbers...\n", nr_requests);
+		printf("Counting %lu requests...\n", nr_requests);
 	}
 
 	for (i = 0; i < nr_requests; i++) {
 		int value = dequeue_ringbuffer();
 
-		if (verbose && i && i % 1000000 == 0) {
+		if (verbose && i && i % print_interval == 0) {
 			printf("%lu k / %lu k counted\n", (i >> 10), (nr_requests >> 10));
 		}
 
-		occurrances[value]++;
+		value_counter[value]++;
 		if (delayed) usleep(10);
 	}
 
@@ -80,25 +52,25 @@ void *counter_main(void *_args_)
 		printf("Counting finished...\n");
 	}
 
-	dump_counting_result();
+	// dump_counting_result();
 	return 0;
 }
 
 int spawn_counter(const enum counter_types type, const unsigned long _nr_requests_)
 {
 	nr_requests = _nr_requests_;
+	print_interval = nr_requests / 10 > print_interval ? print_interval : nr_requests / 10;
+
 	if (type == counter_delayed) {
 		delayed = 1;
 	}
 	pthread_create(&counter_thread, NULL, counter_main, NULL);
-	__initialized = 1;
 	return 0;
 }
 
 void fini_counter(void)
 {
-	if (__initialized) {
+	if (counter_thread) {
 		pthread_join(counter_thread, NULL);
 	}
 }
-
