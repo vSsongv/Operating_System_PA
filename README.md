@@ -49,6 +49,8 @@ Implement the spinlock and blocking mutex that we learned in the class, and buil
 
 - Due to this uncertainty, confirm that your implementation successfully runs on the server *three times in a row*. You may get reduced points when your submission fails during the grading but there is no three consecutive successes in your submission history. To get guaranteed, submit your final code three times.
 
+- While doing the debugging, you may set `nr_testers` in `tester.c` to 1 to identify the flows of the framework. The grading will be done with 4, though.
+
 - Do not use any `pthread_mutex_*` nor `sem_*` unless listed below
   - `pthread_self`
 	- `pthread_kill`
