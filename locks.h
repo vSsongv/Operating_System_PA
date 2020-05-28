@@ -33,13 +33,4 @@ void init_mutex(struct mutex *);
 void acquire_mutex(struct mutex *);
 void release_mutex(struct mutex *);
 
-
-/*************************************************
- * Semaphore
- */
-struct semaphore;
-void init_semaphore(struct semaphore *, const int);
-void wait_semaphore(struct semaphore *);
-void signal_semaphore(struct semaphore *);
-
 #endif

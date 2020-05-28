@@ -1,3 +1,18 @@
+/**********************************************************************
+ * Copyright (c) 2020
+ *  Sang-Hoon Kim <sanghoonkim@ajou.ac.kr>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTIABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ **********************************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -5,272 +20,164 @@
 #include <pthread.h>
 #include <errno.h>
 
+#include <signal.h>
+#include <sys/types.h>
+#include <sys/syscall.h>
+
 #include "types.h"
 #include "locks.h"
 #include "atomic.h"
+#include "list_head.h"
 
-/******************************************************************
+/*********************************************************************
  * Spinlock implementation
+ *********************************************************************/
+struct spinlock {
+
+};
+
+/*********************************************************************
+ * init_spinlock(@lock)
+ *
+ * DESCRIPTION
+ *   Initialize your spinlock instance @lock
  */
 void init_spinlock(struct spinlock *lock)
 {
 	return;
 }
 
+/*********************************************************************
+ * acqure_spinlock(@lock)
+ *
+ * DESCRIPTION
+ *   Acquire the spinlock instance @lock. The returning from this
+ *   function implies that the calling thread grapped the lock.
+ *   In other words, you should not return from this function until
+ *   the calling thread gets the lock.
+ */
 void acquire_spinlock(struct spinlock *lock)
 {
 	return;
 }
 
+/*********************************************************************
+ * release_spinlock(@lock)
+ *
+ * DESCRIPTION
+ *   Release the spinlock instance @lock. Keep in mind that the next thread
+ *   can grap the @lock instance right away when you mark @lock available;
+ *   any pending thread may grap @lock right after marking @lock as free
+ *   but before returning from this function.
+ */
 void release_spinlock(struct spinlock *lock)
 {
 	return;
 }
 
 
-/******************************************************************
+/********************************************************************
  * Blocking mutex implementation
+ ********************************************************************/
+struct thread {
+	pthread_t pthread;
+	struct list_head list;
+};
+
+struct mutex {
+
+};
+
+/*********************************************************************
+ * init_mutex(@mutex)
  *
- * Hint: Use pthread_self, pthread_kill, pause, and signal
+ * DESCRIPTION
+ *   Initialize the mutex instance pointed by @mutex.
  */
-void init_mutex(struct mutex *lock)
+void init_mutex(struct mutex *mutex)
 {
 	return;
 }
 
-void acquire_mutex(struct mutex *lock)
-{
-	return;
-}
-
-void release_mutex(struct mutex *lock)
-{
-	return;
-}
-
-
-/******************************************************************
- * Semaphore implementation
+/*********************************************************************
+ * acquire_mutex(@mutex)
  *
- * Hint: Use pthread_self, pthread_kill, pause, and signal
+ * DESCRIPTION
+ *   Acquire the mutex instance @mutex. Likewise acquire_spinlock(), you
+ *   should not return from this function until the calling thread gets the
+ *   mutex instance. But the calling thread should be put into sleep when
+ *   the mutex is acquired by other threads.
+ *
+ * HINT
+ *   1. Use sigwaitinfo(), sigemptyset(), sigaddset(), sigprocmask() to
+ *      put threads into sleep until the mutex holder wakes up
+ *   2. Use pthread_self() to get the pthread_t instance of the calling thread.
+ *   3. Manage the threads that are waiting for the mutex instance using
+ *      a custom data structure containing the pthread_t and list_head.
+ *      However, you may need to use a spinlock to prevent the race condition
+ *      on the waiter list (i.e., multiple waiters are being inserted into the 
+ *      waiting list simultaneously, one waiters are going into the waiter list
+ *      and the mutex holder tries to remove a waiter from the list, etc..)
  */
-void init_semaphore(struct semaphore *sem, int S)
-{
-	return;
-}
-
-void wait_semaphore(struct semaphore *sem)
-{
-	return;
-}
-
-void signal_semaphore(struct semaphore *sem)
+void acquire_mutex(struct mutex *mutex)
 {
 	return;
 }
 
 
-/******************************************************************
- * Spinlock tester exmaple
+/*********************************************************************
+ * release_mutex(@mutex)
+ *
+ * DESCRIPTION
+ *   Release the mutex held by the calling thread.
+ *
+ * HINT
+ *   1. Use pthread_kill() to wake up a waiter thread
+ *   2. Be careful to prevent race conditions while accessing the waiter list
  */
-struct spinlock testlock;
-int testlock_held = 0;
-
-void *test_thread(void *_arg_)
+void release_mutex(struct mutex *mutex)
 {
-	usleep(random() % 1000 * 1000);
-
-	printf("Tester is acquiring the lock...\n");
-	acquire_spinlock(&testlock);
-	printf("Tester acquired the lock\n");
-	assert(testlock_held == 0);
-	testlock_held = 1;
-
-	usleep(100);
-
-	printf("Tester releases the lock\n");
-	testlock_held = 0;
-	release_spinlock(&testlock);
-	printf("Tester released the lock\n");
-	return 0;
-}
-
-void test_lock(void)
-{
-	/* Set nr_testers as you need
-	 *  1: one main, one tester. easy :-)
-	 * 16: one main, 16 testers contending the lock :-$
-	 */
-	const int nr_testers = 1;
-	int i;
-	pthread_t tester[nr_testers];
-
-	printf("Main initializes the lock\n");
-	init_spinlock(&testlock);
-
-	printf("Main graps the lock...");
-	acquire_spinlock(&testlock);
-	assert(testlock_held == 0);
-	testlock_held = 1;
-	printf("acquired!\n");
-
-	for (i = 0; i < nr_testers; i++) {
-		pthread_create(tester + i, NULL, test_thread, NULL);
-	}
-
-	sleep(1);
-
-	printf("Main releases the lock\n");
-	testlock_held = 0;
-	release_spinlock(&testlock);
-	printf("Main released the lock\n");
-
-	for (i = 0; i < nr_testers; i++) {
-		pthread_join(tester[i], NULL);
-	}
-	assert(testlock_held == 0);
-	printf("Your spinlock implementation looks OK.\n");
-
 	return;
 }
-
 
 
 
 /*********************************************************************
  * Ring buffer
- *
- * DO NOT ALLOCATE SLOTS AS ARRAY
- */
-static int nr_slots = 0;
+ *********************************************************************/
+struct ringbuffer {
+	int nr_slots;
+	int *slots;
+};
 
-static enum lock_types lock_type;
-
-void (*enqueue_fn)(int value) = NULL;
-int (*dequeue_fn)(void) = NULL;
-
-void enqueue_ringbuffer(int value)
-{
-	assert(enqueue_fn);
-	assert(value >= MIN_VALUE && value < MAX_VALUE);
-
-	enqueue_fn(value);
-}
-
-int dequeue_ringbuffer(void)
-{
-	int value;
-
-	assert(dequeue_fn);
-
-	value = dequeue_fn();
-	assert(value >= MIN_VALUE && value < MAX_VALUE);
-
-	return value;
-}
-
+struct ringbuffer ringbuffer = {
+};
 
 /*********************************************************************
- * TODO: Implement using spinlock
+ * TODO: Implement your ring buffer
  */
-void enqueue_using_spinlock(int value)
+void enqueue_into_ringbuffer(int value)
 {
 }
 
-int dequeue_using_spinlock(void)
+int dequeue_from_ringbuffer(void)
 {
-	return 0;
-}
-
-void init_using_spinlock(void)
-{
-	enqueue_fn = &enqueue_using_spinlock;
-	dequeue_fn = &dequeue_using_spinlock;
-}
-
-void fini_using_spinlock(void)
-{
-}
-
-
-/*********************************************************************
- * TODO: Implement using mutex
- */
-void enqueue_using_mutex(int value)
-{
-}
-
-int dequeue_using_mutex(void)
-{
-	return 0;
-}
-
-void init_using_mutex(void)
-{
-	enqueue_fn = &enqueue_using_mutex;
-	dequeue_fn = &dequeue_using_mutex;
-}
-
-void fini_using_mutex(void)
-{
-}
-
-
-/*********************************************************************
- * TODO: Implement using semaphore
- */
-void enqueue_using_semaphore(int value)
-{
-}
-
-int dequeue_using_semaphore(void)
-{
-	return 0;
-}
-
-void init_using_semaphore(void)
-{
-	enqueue_fn = &enqueue_using_semaphore;
-	dequeue_fn = &dequeue_using_semaphore;
-}
-
-void fini_using_semaphore(void)
-{
-}
-
-
-/*********************************************************************
- * Common implementation
- */
-int init_ringbuffer(const int _nr_slots_, const enum lock_types _lock_type_)
-{
-	assert(_nr_slots_ > 0);
-	nr_slots = _nr_slots_;
-
-	/* Initialize lock! */
-	lock_type = _lock_type_;
-	switch (lock_type) {
-	case lock_spinlock:
-		init_using_spinlock();
-		break;
-	case lock_mutex:
-		init_using_mutex();
-		break;
-	case lock_semaphore:
-		init_using_semaphore();
-		break;
-	}
-
-	/* TODO: Initialize your ringbuffer and synchronization mechanism */
-
 	return 0;
 }
 
 void fini_ringbuffer(void)
 {
 	/* TODO: Clean up what you allocated */
-	switch (lock_type) {
-	default:
-		break;
-	}
+
+	free(ringbuffer.slots);
+}
+
+int init_ringbuffer(const int nr_slots)
+{
+	ringbuffer.nr_slots = nr_slots;
+	ringbuffer.slots = malloc(sizeof(int) * nr_slots);
+
+	/* TODO: Initialize your ringbuffer */
+
+	return 0;
 }

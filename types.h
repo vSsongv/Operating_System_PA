@@ -20,6 +20,12 @@ typedef int bool;
 #define true	1
 #define false	0
 
+extern bool verbose;
+
+
+
+/* Belows are for the framework, so don't use them */
+
 enum lock_types {
 	lock_spinlock = 0,
 	lock_mutex = 1,
@@ -29,9 +35,16 @@ enum lock_types {
 #define MIN_VALUE 0
 #define MAX_VALUE 128
 
-extern int verbose;
+extern int nr_generators;
+extern unsigned long nr_generate;
 
-#define GENERATOR_FILENAME "_generated_%d"
-#define COUNTER_FILENAME "_counter"
+extern int counter_delay_usec;
+extern int generator_delay_usec;
+
+#define __print_message(string, args...) \
+	if (verbose) { \
+		printf(string, ##args); \
+		fflush(stdout); \
+	}
 
 #endif

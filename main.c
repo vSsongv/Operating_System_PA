@@ -18,40 +18,97 @@
 #include <unistd.h>
 #include <errno.h>
 #include <pthread.h>
+#include <sys/time.h>
+#include <assert.h>
 
 #include "types.h"
 
 #include "locks.h"
-#include "ringbuffer.h"
 #include "generator.h"
 #include "counter.h"
-
 
 /*************************************************
  * Lock tester.
  * Will be invoked if the program is run with -T
  */
-void test_lock(void);
+void test_lock(enum lock_types);
 
 /* Common */
 int verbose = 1;
 
 /* Generator */
 static enum generator_types generator_type = generator_constant;
-static int nr_generators = 1;
-static unsigned long nr_generate = 128;
+int nr_generators = 1;
+unsigned long nr_generate = 128;
 
 /* Counter */
 static enum counter_types counter_type = counter_normal;
 
 /* Ring buffer */
 static int nr_slots = 32;
-static enum lock_types lock_type = lock_spinlock;
+
+/*********************************************************************
+ * Common implementation
+ */
+void enqueue_into_ringbuffer(int value);
+int dequeue_from_ringbuffer(void);
+void fini_ringbuffer(void);
+int init_ringbuffer(const int nr_slots);
+
+void __enqueue_rb(int value)
+{
+	assert(value >= MIN_VALUE && value < MAX_VALUE);
+	enqueue_into_ringbuffer(value);
+}
+
+int __dequeue_rb(void)
+{
+	int value;
+
+	value = dequeue_from_ringbuffer();
+	assert(value >= MIN_VALUE && value < MAX_VALUE);
+
+	return value;
+}
+
+static int __init_rb(const int _nr_slots_)
+{
+	assert(_nr_slots_ > 0);
+	return init_ringbuffer(_nr_slots_);
+}
+
+static void __fini_rb(void)
+{
+	fini_ringbuffer();
+}
+
+static void __print_usage(const char *argv0)
+{
+	printf("Usage: %s {options}\n", argv0);
+	printf("\n");
+	printf(" Run with -l to check the correctness of the lock implementation\n");
+	printf("  -m         : Test mutex instead of spinlock\n");
+	printf("\n");
+	printf(" Run with -r to check the ring buffer implementation\n");
+	printf("  -g [number]: Spawn @number generators for test\n");
+	printf("  -n [number]: Generate @number requests per generator\n");
+	printf("  -R         : Use random generator rather than constant generator\n");
+	printf("  -s [number]: Set the number of slots in the ring buffer\n");
+	printf("\n");
+	printf("  -h | -?    : Print usage\n");
+	printf("  -v | -q    : Make verbose or quiet\n");
+	printf("\n");
+}
+
 
 int parse_options(int argc, char * const argv[])
 {
 	char opt;
-	while ((opt = getopt(argc, argv, "vqg:s:n:R:rSM01234h?T")) != -1) {
+	bool test_locks = false;
+	bool test_ringbuffer = false;
+	enum lock_types lock_type = lock_spinlock;
+
+	while ((opt = getopt(argc, argv, "vqg:s:n:RrSml012h?")) != -1) {
 		switch(opt) {
 		case 'v':
 			verbose = 1;
@@ -59,13 +116,13 @@ int parse_options(int argc, char * const argv[])
 		case 'q':
 			verbose = 0;
 			break;
-		case 'T':
-			test_lock();
-			exit(0);
-		case 'R':
-			srandom(atoi(optarg));
+		case 'l':
+			test_locks = true;
 			break;
 		case 'r':
+			test_ringbuffer = true;
+			break;
+		case 'R':
 			generator_type = generator_random;
 			break;
 		case 'g':
@@ -74,98 +131,132 @@ int parse_options(int argc, char * const argv[])
 		case 'n':
 			nr_generate = atoll(optarg);
 			break;
-		case 'S':
-			lock_type = lock_semaphore;
-			break;
-		case 'M':
+		case 'm':
+			test_locks = true;
 			lock_type = lock_mutex;
 			break;
 		case 's':
 			nr_slots = atoi(optarg);
 			break;
 		case '0':
+			test_ringbuffer = true;
 			generator_type = generator_random;
 			nr_generators = 4;
 			nr_generate = (1 << 12);
-			lock_type = lock_spinlock;
 			verbose = 0;
 			break;
-		case '1':
+		case '1': /* Overflow test */
+			test_ringbuffer = true;
+			nr_slots = 4;
+			generator_type = generator_random;
+			nr_generators = 8;
+			nr_generate = (1 << 11);
+			counter_delay_usec = 20;
+			verbose = 0;
+			break;
+		case '2': /* Underflow test */
+			test_ringbuffer = true;
 			generator_type = generator_random;
 			nr_generators = 4;
 			nr_generate = (1 << 12);
-			lock_type = lock_mutex;
-			verbose = 0;
-			break;
-		case '2':
-			generator_type = generator_random;
-			nr_generators = 4;
-			nr_generate = (1 << 12);
-			lock_type = lock_semaphore;
-			verbose = 0;
-			break;
-		case '3': /* Overflow test */
-			generator_type = generator_random;
-			nr_generators = 4;
-			nr_generate = (1 << 10);
-			counter_type = counter_delayed;
-			verbose = 0;
-			break;
-		case '4': /* Underflow test */
-			generator_type = generator_delayed;
-			nr_generators = 4;
-			nr_generate = (1 << 10);
+			generator_delay_usec = 20;
 			verbose = 0;
 			break;
 		case 'h':
 		case '?':
 		default:
-			printf("Usage: %s {options}\n", argv[0]);
-			printf("\n");
-			printf("  -g [number]: Spawn @number generators for test\n", argv[0]);
-			printf("  -n [number]: Generate @number requests per generator\n");
-			printf("  -r         : Use random generator rather than constant generator\n");
-			printf("\n");
-			printf("  -s [number]: Initialize the ringbuffer with @number slots\n");
-			printf("  -M         : Test mutex */\n");
-			printf("  -S         : Test semaphore */\n");
-			printf("  -h | -?    : Print usage */\n");
-			printf("  -v | -q    : Make verbose or quiet */\n");
-			printf("\n");
+			__print_usage(argv[0]);
 			return EXIT_FAILURE;
 		}
 	}
+
+	if (!test_locks && !test_ringbuffer) {
+		__print_usage(argv[0]);
+		return EXIT_FAILURE;
+	}
+	if (test_locks) {
+		test_lock(lock_type);
+		exit(0);
+	}
 	return 0;
+}
+
+void compare_results(unsigned long generated_values[], unsigned long counted_values[])
+{
+	bool mismatch = false;
+
+	for (int i = MIN_VALUE; i < MAX_VALUE; i++) {
+		if (generated_values[i] != counted_values[i]) {
+			if (!mismatch) {
+				mismatch = true;
+				printf(">>> Mismatching in generation and counting!!! <<<\n");
+				printf("     -----------------------------\n");
+				printf("      Value   generated   counted\n");
+				printf("     -----------------------------\n");
+			}
+			fprintf(stderr, "      %4d : %8lu != %-8lu\n",
+					i,generated_values[i], counted_values[i]);
+		}
+	}
+
+	printf("\n");
+	fprintf(stderr, ">>> The ring buffer is %sworking properly!! <<<\n", mismatch ? "**NOT** " : "");
+	printf("\n");
 }
 
 int main(int argc, char * const argv[])
 {
 	int retval = EXIT_SUCCESS;
-	int generated_values[MAX_VALUE] = {0};
-	int counted_values[MAX_VALUE] = {0};
+	unsigned long generated_values[MAX_VALUE] = {0};
+	unsigned long counted_values[MAX_VALUE] = {0};
+	unsigned long nr_requests_to_generate;
 
-	system("rm -f GEN* RESULT*");
+	struct timeval start, end;
+	unsigned long elapsed;
+
+	__print_message("\n");
+	__print_message(" _               _      _____         _            \n");
+	__print_message("| |    ___   ___| | __ |_   _|__  ___| |_ ___ _ __ \n");
+	__print_message("| |   / _ \\ / __| |/ /   | |/ _ \\/ __| __/ _ \\ '__|\n");
+	__print_message("| |__| (_) | (__|   <    | |  __/\\__ \\ ||  __/ |   \n");
+	__print_message("|_____\\___/ \\___|_|\\_\\   |_|\\___||___/\\__\\___|_|\n");
+	__print_message("\n");
+	__print_message("                                    2020 Spring\n");
+	__print_message("\n");
 
 	if ((retval = parse_options(argc, argv))) {
 		goto exit;
 	}
-	if ((retval = init_ringbuffer(nr_slots, lock_type))) {
+	if ((retval = __init_rb(nr_slots))) {
 		goto exit;
 	}
 
-	if ((retval = spawn_counter(counter_type, nr_generators * nr_generate))) {
+	nr_requests_to_generate = nr_generate * nr_generators;
+
+	if ((retval = spawn_counter(counter_type, nr_requests_to_generate))) {
 		goto exit_ring;
 	}
 
-	spawn_generators(generator_type, nr_generators, nr_generate);
+	spawn_generators(generator_type);
 
-	do_generate(generated_values);
+	gettimeofday(&start, NULL);
+	do_generate();
+	gettimeofday(&end, NULL);
+	elapsed = (end.tv_sec * 1000000 + end.tv_usec) -
+				(start.tv_sec * 1000000 + start.tv_usec);
 
-	fini_generators();
-	fini_counter();
+	fini_generators(generated_values);
+	fini_counter(counted_values);
+
+	compare_results(generated_values, counted_values);
+	printf(         "     # of requests : %lu\n", nr_requests_to_generate);
+	printf(         "  Time to complete : %lu.%06d\n", elapsed / 1000000, elapsed % 1000000);
+	fprintf(stderr, "       Performance : %.1f req/sec\n",
+			(float)nr_requests_to_generate * 1000000 / elapsed);
+	printf("\n");
 
 exit_ring:
-	fini_ringbuffer();
+	__fini_rb();
 exit:
 	return retval;
 }

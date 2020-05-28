@@ -21,7 +21,7 @@ enum counter_types {
 	counter_delayed,
 };
 
-int spawn_counter(const enum counter_types, const unsigned long nr_requests);
-void fini_counter(void);
+int spawn_counter(const enum counter_types, const unsigned long);
+void fini_counter(unsigned long []);
 
 #endif

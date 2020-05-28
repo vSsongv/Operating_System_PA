@@ -23,42 +23,33 @@
 
 #include "types.h"
 #include "generator.h"
-#include "ringbuffer.h"
 
-static int nr_generators = 0;
-static unsigned long nr_generate = 0;
-
+/* Barrier to synchronize generators */
 static pthread_barrier_t barrier;
 
-/* Generator functions */
-int generator_fn_constant(int tid)
+int generator_delay_usec = 0;
+
+/* Assorted generator functions */
+int generator_fn_constant(int id)
 {
 	return 43;
 }
 
-int generator_fn_random(int tid)
+int generator_fn_random(int id)
 {
+	if (generator_delay_usec) usleep(generator_delay_usec);
 	return MIN_VALUE + (random() % (MAX_VALUE - MIN_VALUE));
 }
 
-int generator_fn_delayed(int tid)
-{
-	usleep(100);
-	return generator_fn_random(tid);
-}
-
-int (*assign_generator_fn(enum generator_types type, int tid))(int)
+int (*assign_generator_fn(int id, enum generator_types type))(int)
 {
 	switch(type) {
 	case generator_constant:
 		return &generator_fn_constant;
 	case generator_random:
 		return &generator_fn_random;
-	case generator_delayed:
-		return &generator_fn_delayed;
 	case generator_mixed:
-		if (tid < 4) return &generator_fn_constant;
-		return &generator_fn_random;
+		return id % 2 == 0 ? &generator_fn_constant : &generator_fn_random;
 	default:
 		assert(0);
 		break;
@@ -70,54 +61,51 @@ int (*assign_generator_fn(enum generator_types type, int tid))(int)
 
 struct generator {
 	pthread_t thread;
-	int tid;
-	int (*generator_fn)(int tid);
+	int id;
+	int (*generator_fn)(int id);
 	unsigned long generated[MAX_VALUE];
 };
 static struct generator *generators = NULL;
 
+void __enqueue_rb(int value);
+
 void *generator_main(void *_args_)
 {
-	unsigned long i;
 	struct generator *my = (struct generator *)_args_;
-	int value;
 
-	if (verbose) {
-		printf("Generator %d started...\n", my->tid);
-	}
+	if (verbose) printf("Generator %d started...\n", my->id);
 
-	pthread_barrier_wait(&barrier);
+	pthread_barrier_wait(&barrier); /* 1st barrier */
 
-	for (i = 0; i < nr_generate; i++) {
-		value = my->generator_fn(my->tid);
+	for (unsigned long i = 0; i < nr_generate; i++) {
+		/* Generate a number */
+		int value = my->generator_fn(my->id);
 
-		enqueue_ringbuffer((int)value);
+		/* The generator inserts the generated number into the ring buffer */
+		__enqueue_rb((int)value);
+
+		/* Account for the generated value */
 		my->generated[value]++;
 
-		if (verbose && i && i % (1 << 10) == 0) {
-			printf("Generator %d generated %lu k / %lu k\n",
-					my->tid, (i >> 10), (nr_generate >> 10));
+		if (verbose && i && i % (nr_generate >> 4) == 0) {
+			printf("Generator %d generated %lu / %lu (%d\%)\n",
+					my->id, i, nr_generate, i * 100 / nr_generate);
 		}
 	}
-	if (verbose) {
-		printf("Generator %d finished...\n", my->tid);
-	}
-	pthread_barrier_wait(&barrier);
-	/* Wait for the generated values are collected */
-	pthread_barrier_wait(&barrier);
+	if (verbose) printf("Generator %d finished...\n", my->id);
+
+	pthread_barrier_wait(&barrier); /* 2nd barrier */
+
+	/* Wait for main thread to collect generated value counts */
+	pthread_barrier_wait(&barrier);	/* 3rd barrier */
 
 	return 0;
 }
 
-int spawn_generators(const enum generator_types type, const int _nr_generators_, const unsigned long _nr_generate_)
+int spawn_generators(const enum generator_types type)
 {
-	int i;
-
-	assert(_nr_generators_ > 0);
-	nr_generators = _nr_generators_;
-
-	assert(_nr_generate_ > 0);
-	nr_generate = _nr_generate_;
+	assert(nr_generators > 0);
+	assert(nr_generate > 0);
 
 	generators = calloc(nr_generators, sizeof(*generators));
 	assert(generators);
@@ -125,22 +113,25 @@ int spawn_generators(const enum generator_types type, const int _nr_generators_,
 
 	pthread_barrier_init(&barrier, NULL, nr_generators + 1);
 
-	for (i = 0; i < nr_generators; i++) {
+	for (int i = 0; i < nr_generators; i++) {
 		struct generator *g = generators + i;
-		g->tid = i;
-		g->generator_fn = assign_generator_fn(type, i);
+		g->id = i;
+		g->generator_fn = assign_generator_fn(i, type);
 		pthread_create(&g->thread, NULL, generator_main, g);
 	}
 
-	pthread_barrier_wait(&barrier);
+	pthread_barrier_wait(&barrier);	/* 1st barrier */
 
 	return 0;
 }
 
-void do_generate(int values[])
+void do_generate(void)
 {
-	pthread_barrier_wait(&barrier);
+	pthread_barrier_wait(&barrier);	/* 2nd barrier */
+}
 
+void fini_generators(unsigned long values[])
+{
 	/* Collect generation result */
 	for (int i = 0; i < nr_generators; i++) {
 		struct generator *g = generators + i;
@@ -151,38 +142,15 @@ void do_generate(int values[])
 
 	for (int n = MIN_VALUE; n < MAX_VALUE; n++) {
 		if (!values[n]) continue;
-		printf("%d  %d\n", n, values[n]);
 	}
 
-	pthread_barrier_wait(&barrier);
-}
+	pthread_barrier_wait(&barrier);	/* 3rd barrier */
 
-void fini_generators(void)
-{
-	int i;
-
-	for (i = 0; i < nr_generators; i++) {
+	for (int i = 0; i < nr_generators; i++) {
 		struct generator *g = generators + i;
 		if ((unsigned long)(g->thread) != 0) {
 			pthread_join(g->thread, NULL);
 		}
 	}
 	free(generators);
-}
-
-void dump_generation_result(const struct generator *g)
-{
-	char filename[80];
-	FILE *fp;
-	int value;
-
-	/* Log the generating summary */
-	snprintf(filename, sizeof(filename), GENERATOR_FILENAME, g->tid);
-	fp = fopen(filename, "w");
-	assert(fp);
-	for (value = MIN_VALUE; value < MAX_VALUE; value++) {
-		if (!g->generated[value]) continue;
-		fprintf(fp, "%d %lu\n", value, g->generated[value]);
-	}
-	fclose(fp);
 }
