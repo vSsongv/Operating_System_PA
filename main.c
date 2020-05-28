@@ -86,14 +86,18 @@ static void __print_usage(const char *argv0)
 {
 	printf("Usage: %s {options}\n", argv0);
 	printf("\n");
-	printf(" Run with -l to check the correctness of the lock implementation\n");
-	printf("  -m         : Test mutex instead of spinlock\n");
+	printf(" Run with -l or -m to check the correctness of the lock implementation\n");
+	printf("  -l         : Test spinlock implementation\n");
+	printf("  -m         : Torture blocking mutex\n");
 	printf("\n");
 	printf(" Run with -r to check the ring buffer implementation\n");
 	printf("  -g [number]: Spawn @number generators for test\n");
 	printf("  -n [number]: Generate @number requests per generator\n");
 	printf("  -R         : Use random generator rather than constant generator\n");
 	printf("  -s [number]: Set the number of slots in the ring buffer\n");
+	printf("  -0         : Comprehensive test with realistic values\n");
+	printf("  -1         : Test full ring buffer\n");
+	printf("  -2         : Test empty ring buffer\n");
 	printf("\n");
 	printf("  -h | -?    : Print usage\n");
 	printf("  -v | -q    : Make verbose or quiet\n");

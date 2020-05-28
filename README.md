@@ -16,7 +16,7 @@ Implement the spinlock and blocking mutex that we learned in the class, and buil
 
 - The correctness testing will take a while, but is supposed to be finished within a minute. Taking longer than this time bound implies two possibilities;
   - Your implementation performs too badly. You need to improve your implementation to pass the test.
-	- Blocked indefinitely. Your implementation has some race conditions, making deadlocks and/or starvation. This should be fixed for sure.
+  - Blocked indefinitely. Your implementation has some race conditions, making deadlocks and/or starvation. This should be fixed for sure.
 
 - The tester may generate an assertion failure. This also implies your implementation fails to provide the expected properties of the lock primitive.
 
@@ -35,14 +35,14 @@ Implement the spinlock and blocking mutex that we learned in the class, and buil
 
 - You may get bonus points by completing the following challenges.
   - Implement a **blocking counting** semaphore, and realize the mutex with a binary semaphore configuration.
-	- Realize the ring buffer as described on page 8 of 16. Synchronizatoin (3).
+  - Realize the ring buffer as described on page 8 of 16. Synchronizatoin (3).
 
 
 ### Restriction and tips
 - Following cases can be happened if your implementation has a race condition. This means your implementation is **WRONG**, thereby should be fixed to get the points. Thus, questions regarding these situation will not get help from the instructor.
   - Testing fails *SOMETIMES*
   - Testing works *SOMETIMES*
-	- Some features are working but some features are not
+  - Some features are working but some features are not
   - Testing works on your computer but not on the server
   - Testing works on the server but not on your computer
   - Testing works on a set of options but not on a different set of options.
@@ -53,9 +53,9 @@ Implement the spinlock and blocking mutex that we learned in the class, and buil
 
 - Do not use any `pthread_mutex_*` nor `sem_*` unless listed below
   - `pthread_self`
-	- `pthread_kill`
-	- `pthread_sigmask`
-	- `pthread_sigqueue`
+  - `pthread_kill`
+  - `pthread_sigmask`
+  - `pthread_sigqueue`
 
 - Install `glibc-doc` package if your system fails to find man pages for `pthread_*` 
 
