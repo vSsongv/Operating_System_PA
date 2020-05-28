@@ -146,38 +146,68 @@ void release_mutex(struct mutex *mutex)
  * Ring buffer
  *********************************************************************/
 struct ringbuffer {
-	int nr_slots;
-	int *slots;
+	/** NEVER CHANGE @nr_slots AND @slots ****/
+	/**/ int nr_slots;                     /**/
+	/**/ int *slots;                       /**/
+	/*****************************************/
 };
 
 struct ringbuffer ringbuffer = {
 };
 
 /*********************************************************************
- * TODO: Implement your ring buffer
+ * enqueue_into_ringbuffer(@value)
+ *
+ * DESCRIPTION
+ *   Generator in the framework tries to put @value into the buffer.
  */
 void enqueue_into_ringbuffer(int value)
 {
 }
 
+
+/*********************************************************************
+ * dequeue_from_ringbuffer(@value)
+ *
+ * DESCRIPTION
+ *   Counter in the framework wants to get a value from the buffer.
+ *
+ * RETURN
+ *   Return one value from the buffer.
+ */
 int dequeue_from_ringbuffer(void)
 {
 	return 0;
 }
 
+
+/*********************************************************************
+ * fini_ringbuffer
+ *
+ * DESCRIPTION
+ *   Clean up your ring buffer.
+ */
 void fini_ringbuffer(void)
 {
-	/* TODO: Clean up what you allocated */
-
 	free(ringbuffer.slots);
 }
 
+/*********************************************************************
+ * init_ringbuffer(@nr_slots)
+ *
+ * DESCRIPTION
+ *   Initialize the ring buffer which has @nr_slots slots.
+ *
+ * RETURN
+ *   0 on success.
+ *   Other values otherwise.
+ */
 int init_ringbuffer(const int nr_slots)
 {
-	ringbuffer.nr_slots = nr_slots;
-	ringbuffer.slots = malloc(sizeof(int) * nr_slots);
-
-	/* TODO: Initialize your ringbuffer */
+	/** DO NOT MODIFY THOSE TWO LINES **************************/
+	/**/ ringbuffer.nr_slots = nr_slots;                     /**/
+	/**/ ringbuffer.slots = malloc(sizeof(int) * nr_slots);  /**/
+	/***********************************************************/
 
 	return 0;
 }

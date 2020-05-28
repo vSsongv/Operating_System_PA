@@ -45,7 +45,7 @@ unsigned long nr_generate = 128;
 static enum counter_types counter_type = counter_normal;
 
 /* Ring buffer */
-static int nr_slots = 32;
+static int nr_slots = 64;
 
 /*********************************************************************
  * Common implementation
