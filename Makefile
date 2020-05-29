@@ -11,7 +11,7 @@ HEADERS=$(wildcard ./*.h)
 all: lock
 
 lock: pa3.o main.o generator.o counter.o tester.o
-	gcc $(LDFLAGS) $^ -o $@
+	gcc $^ -o $@ $(LDFLAGS)
 
 %.o: %.c $(HEADERS)
 	gcc $(CFLAGS) $< -o $@
