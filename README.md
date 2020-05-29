@@ -25,10 +25,11 @@ Implement the spinlock and blocking mutex that we learned in the class. And then
 - Use `compare_and_swap()` in `atomic.h` to implement the spinlock. It is the atomic instruction that we discussed in the class.
 
 - To implement the blocking mutex, you should design a mechanism that puts a calling thread into sleep and wakes up one of waiting threads. Read the comments in the `pa3.c` carefully for your implementation. Also, you may use `struct thread` as is or after modification.
-- When multiple threads try to acquire the blocking mutex that is already taken by some other thread, the mutex acquisition requests should be handled in FCFS order.
-- You may [eat your own dog food](https://en.wikipedia.org/wiki/Eating_your_own_dog_food); you may, but are not restricted to, use your spinlock implementation to synchronize waiting threads in the mutex.
+- When multiple threads try to acquire the blocking mutex that is already taken by some other thread, the mutex acquisition requests should be handled in FCFS order. Note that it doesn't matter for spinlock to keep the order, though.
+- You may [eat your own dog food](https://en.wikipedia.org/wiki/Eating_your_own_dog_food); you may, but are not restricted to, use your spinlock implementation to keep the waiting threads in a list. 
+- The tester determines whether your implementation is busy-waiting or blocking. In the most cases, it will give you right decisions. However, if you are sure that it keeps misjudging your implementation, ask the instructor via email.
 
-- When you run the tester with `-r` option, it tests your ring buffer implementation. Basically, the tester simulates the n-producer 1-consumer situation that is discussed in the class. The producers (i.e. generators) generate integer numbers and enqueue them into the ring buffer by calling `enqueue_into_ringbuffer()`. The consumer (i.e., counter) counts the numbers by getting numbers from the ring buffer by calling `dequeue_from_ringbuffer()`. Your implementation will pass the test if and only if the numbers the generators generate match to the numbers the counter counts. Mismatching of the numbers indicates that your implementation fails to synchronize the generators and counter.
+- When you run the tester with `-r` option, it tests your ring buffer implementation. Basically, the tester simulates *the n-producer 1-consumer situation* that is discussed in the class. The producers (i.e. generators) generate integer numbers and enqueue them into the ring buffer by calling `enqueue_into_ringbuffer()`. The consumer (i.e., counter) counts the numbers by getting numbers from the ring buffer by calling `dequeue_from_ringbuffer()`. Your implementation will pass the test if and only if the numbers the generators generate match to the numbers the counter counts. Mismatching of the numbers indicates that your implementation fails to synchronize the generators and counter.
 
 - To implement the ring buffer, you can modify `struct ringbuffer` as you need, but you should use `slots` and `nr_slots` **as is**; you should use `slots` to buffer values. Also do not try to replace this pointer variable with an array, or allocate your own buffer to store values. The failure for this restriction will revoke your points for the ring buffer implementation.
 
@@ -37,6 +38,7 @@ Implement the spinlock and blocking mutex that we learned in the class. And then
 - You may get bonus points by completing the following challenges.
   - Implement a **blocking counting** semaphore, and realize the mutex by initializing the semaphore with S=1.
   - Actualize the ring buffer using the counting and binary semaphores as described on page 8 of the lecture material #16.
+![Ring buffer](https://sslab.ajou.ac.kr/attend/pa3-ringbuffer.png)
 
 
 ### Restriction and tips
