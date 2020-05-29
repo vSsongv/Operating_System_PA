@@ -88,7 +88,7 @@ void *generator_main(void *_args_)
 		my->generated[value]++;
 
 		if (verbose && i && i % (nr_generate >> 4) == 0) {
-			printf("Generator %d generated %lu / %lu (%d\%)\n",
+			printf("Generator %d generated %lu / %lu (%lu%%)\n",
 					my->id, i, nr_generate, i * 100 / nr_generate);
 		}
 	}

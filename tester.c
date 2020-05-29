@@ -111,7 +111,7 @@ static void *test_thread(void *_arg_)
 	if (id != progress++) {
 		lock_in_order = false;
 	}
-	__print_message("   %d acquired the lock\n", id);
+	__print_message("   %ld acquired the lock\n", id);
 	usleep((nr_testers - id) * 100000);
 	__unlock();
 

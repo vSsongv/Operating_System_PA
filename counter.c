@@ -45,7 +45,7 @@ void *counter_main(void *_args_)
 		if (counter_delay_usec) usleep(counter_delay_usec);
 
 		if (verbose && i && i % (nr_requests >> 4) == 0) {
-			printf("Counter counted %lu / %lu (%d\%)\n",
+			printf("Counter counted %lu / %lu (%lu%%)\n",
 					i, nr_requests, i * 100 / nr_requests);
 		}
 	}

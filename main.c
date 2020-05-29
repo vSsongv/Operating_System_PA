@@ -254,7 +254,7 @@ int main(int argc, char * const argv[])
 
 	compare_results(generated_values, counted_values);
 	printf(         "     # of requests : %lu\n", nr_requests_to_generate);
-	printf(         "  Time to complete : %lu.%06d\n", elapsed / 1000000, elapsed % 1000000);
+	printf(         "  Time to complete : %lu.%06lu\n", elapsed / 1000000, elapsed % 1000000);
 	fprintf(stderr, "       Performance : %.1f req/sec\n",
 			(float)nr_requests_to_generate * 1000000 / elapsed);
 	printf("\n");
