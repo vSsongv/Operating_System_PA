@@ -69,10 +69,11 @@ Implement the spinlock and blocking mutex that we learned in the class. And then
 ### Submission / Grading
 
 - Use [PAsubmit](https://sslab.ajou.ac.kr/pasubmit) for submission
-  - 450 regular points
-  - Up to 130 bonus points
+  - Up to 580 points
+    - 450 regular points
+    - Up to 130 bonus points
 
-- Code: `pa3.c` (400 pts + 100 bonus pts in total)
+- Code: `pa3.c` (400 pts + 120 bonus pts in total)
 	- Spinlock: 50 pts
 	- Blocking mutex: 250 pts
 	- Ring buffer: 100 pts
