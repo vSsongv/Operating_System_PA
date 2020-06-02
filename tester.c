@@ -174,24 +174,25 @@ void test_lock(enum lock_types _lock_type_)
 	__unlock();
 	__print_message("  [Done]\n");
 
+
 	/*********************************************************
 	 * Testing threads keep torturing the lock for @testing_duration_sec.
 	 */
 	__print_message("2. Verify the mutual exclusiveness further");
-	fflush(stdout);
 	for (int i = 0; i < testing_duration_sec; i++) {
 		sleep(1);
 		__print_message(".");
 	}
 	__print_message("  [Done]\n");
-	fprintf(stderr, "   Performance: %.1f operations/sec\n", (float)nr_tested / testing_duration_sec);
+	fprintf(stderr, "   Performance: %lu operations/sec\n",
+			nr_tested / testing_duration_sec);
+
 
 	/*********************************************************
 	 * Testing possible-race condition.
 	 * Will be blocked indefinitely if a race condition happens.
 	 */
 	__print_message("3. Check race condition during waking up.......");
-	fflush(stdout);
 	hold_duration_usec = 1;
 	for (int i = 0; i < 100; i++) {
 		__lock();
@@ -200,20 +201,24 @@ void test_lock(enum lock_types _lock_type_)
 	}
 	__print_message("  [Done]\n");
 
+
 	__print_message("4. Analyze lock waiting policy....");
 	ret = is_busywaiting();
 	__print_message("             [Done]\n");
-	fprintf(stderr, "   Seem to be a %s lock\n", ret ? "busy-waiting" : "blocking");
+	fprintf(stderr, "   Seem to be a %s lock\n",
+			ret ? "busy-waiting" : "blocking");
 	assert((lock_type == lock_spinlock && ret == true) ||
 		   (lock_type == lock_mutex && ret == false));
 
 	keep_testing = false;
 
+
 	__print_message("5. Analyze the lock waiting order...\n");
 	pthread_barrier_wait(&barrier);
 
 	pthread_barrier_wait(&barrier);
-	fprintf(stderr, "   Waiting %s\n", lock_in_order ? "in order" : "out of order");
+	fprintf(stderr, "   Waiting %s\n",
+			lock_in_order ? "in order" : "out of order");
 
 	for (int i = 0; i < nr_testers; i++) {
 		pthread_join(tester[i], NULL);
