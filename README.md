@@ -69,15 +69,20 @@ Implement the spinlock and blocking mutex that we learned in the class. And then
 ### Submission / Grading
 
 - Use [PAsubmit](https://sslab.ajou.ac.kr/pasubmit) for submission
-  - 450 points + (100 + 10) bonus points
+  - 450 regular points
+  - Up to 130 bonus points
 
 - Code: `pa3.c` (400 pts + 100 bonus pts in total)
 	- Spinlock: 50 pts
 	- Blocking mutex: 250 pts
 	- Ring buffer: 100 pts
-	- 100 bonus points.
+	- 100 bonus points for advanced implementation
 	  - 70 bouns points if you implement a blocking counting semaphore, and use it to implement the mutex.
 	  - 30 bouns points if you implement the ring buffer using your semaphore.
+  - (Updated June 2) Bonus points for high performance implementation
+    - Check the "Leaderboard" for the candidates
+    - 20 bonus points for top-3
+    - 10 bonus points for the next top-7
 
 - Document: One PDF document (50 pts). It should include followings;
   - How the spinlock is implemented.
