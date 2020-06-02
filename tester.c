@@ -32,7 +32,7 @@ static void *testlock;
 static int testlock_held = 0;
 static enum lock_types lock_type;
 
-static int nr_tested = 0;
+static unsigned long nr_tested = 0;
 static int testing_duration_sec = 5;
 
 const int nr_testers = 4;
