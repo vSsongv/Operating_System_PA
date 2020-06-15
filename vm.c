@@ -198,7 +198,7 @@ static bool __alloc_page(unsigned int vpn, unsigned int rw)
 		fprintf(stderr, "memory is full\n");
 		return false;
 	}
-	fprintf(stderr, "%3u --> %3u\n", vpn, pfn);
+	fprintf(stderr, "alloc %3u --> %-3u\n", vpn, pfn);
 	
 	return true;
 }
@@ -211,6 +211,7 @@ static bool __free_page(unsigned int vpn)
 		fprintf(stderr, "%u is not allocated\n", vpn);
 		return false;
 	}
+	fprintf(stderr, "free %u (pfn %u)\n", vpn, pfn);
 	free_page(vpn);
 
 	return true;
@@ -227,11 +228,12 @@ static void __show_pageframes(void)
 		if (!mapcounts[i]) continue;
 		fprintf(stderr, "%3u: %d\n", i, mapcounts[i]);
 	}
+	fprintf(stderr, "\n");
 }
 
 static void __show_pagetable(void)
 {
-	fprintf(stderr, "*** PID %u ***\n", current->pid);
+	fprintf(stderr, "\n*** PID %u ***\n", current->pid);
 
 	for (int i = 0; i < NR_PTES_PER_PAGE; i++) {
 		struct pte_directory *pd = current->pagetable.outer_ptes[i];
@@ -312,7 +314,7 @@ static void __do_simulation(FILE *input)
 			if (strmatch(tokens[0], "switch") || strmatch(tokens[0], "s")) {
 				switch_process(arg);
 			} else if (strmatch(tokens[0], "free") || strmatch(tokens[0], "f")) {
-				if (!__free_page(arg)) break;
+				__free_page(arg);
 			} else if (strmatch(tokens[0], "read") || strmatch(tokens[0], "r")) {
 				__access_memory(arg, RW_READ);
 			} else if (strmatch(tokens[0], "write") || strmatch(tokens[0], "w")) {
@@ -385,7 +387,7 @@ int main(int argc, char * argv[])
 			fprintf(stderr, "No input file %s\n", argv[optind]);
 			return EXIT_FAILURE;
 		}
-		verbose = true;
+		verbose = false;
 	} else {
 		if (verbose) printf("Use stdin for input.\n");
 	}
