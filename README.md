@@ -70,6 +70,7 @@ To duplicate the parent's address space, set up the PTE in the child's page tabl
 	- Page deallocation (50 pts)
 	- Fork (100 pts)
 	- Copy-on-Write (150 pts)
+	- In the last PA, some users kept submitting their work (~1,000 times) preventing other students' progress. For this reason, **you can now submit up to 100 times for this PA**. So, take the revision number on the submission page into consideration.
 
 - Document: One PDF document (200 pts) including;
 	- Describe how you implement page allocation, deallocation, fork, and copy-on-write.
