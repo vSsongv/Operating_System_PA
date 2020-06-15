@@ -19,7 +19,7 @@ Implement a mini virtual memory system simulator.
   ```
   >> alloc 10 r	    # Allocate a page frame for VPN 10 for read
   >> alloc 20 rw    # Allocate a page frame for VPN 20 for read and write
-	>> alloc 0x10 rw  # Allocate a page to VPN 0x10 for read and write
+  >> alloc 0x10 rw  # Allocate a page to VPN 0x10 for read and write
 	```
 	
 - The pages allocated with `r` option are read-only pages. Writes to those pages should be rejected. The pages allocated with `rw` can be read and written. This implies that both read and write accesses to those VPNs should be allowed.
@@ -37,7 +37,7 @@ Implement a mini virtual memory system simulator.
 	```
 	>> read 10    /* Read VPN 10 */
 	>> write 0x10 /* Write to VPN 0x10 */
-```
+  ```
   
 - Each read and write request will be processed by the framework.
 Internally, it calls `__translate()` in `vm.c`, which simulates the address translation in MMU.
@@ -57,7 +57,7 @@ To duplicate the parent's address space, set up the PTE in the child's page tabl
 
 ### Tips and Restriction
 - Implement features in an incremental way; implement the allocatoin/deallocation functions first to get used to the page table/PTE manipulation. And then move on to implement the fork by duplicating the page table contents. You need to manipulate both PTEs of parent and child to support copy-on-write properly.
-- Be careful to handle `writable` bit in the page table when you attach a page or share it. Read-only pages should not be writable after the fork whereas writable pages should be writable after the fork through the copy-on-write mechanism. You can leverage the `private` variable in `struct pte` to implement this feature.
+- Be careful to handle `writable` bit in the page table when you attach a page or share it. Read-only pages should not be writable after the fork whereas writable pages should be writable after the fork through the copy-on-write mechanism. You can leverage the `private` variable in `struct pte` to implement this feature.
 - Likewise previous PAs, printing out to stdout does not influence on the grading. So, feel free to print out debug message using `printf`.
 
 
@@ -74,10 +74,10 @@ To duplicate the parent's address space, set up the PTE in the child's page tabl
 - Document: One PDF document (200 pts) including;
 	- Describe how you implement page allocation, deallocation, fork, and copy-on-write.
 	- *This time, the quality of writing will be carefully evaluated.*
-	  - You may get reduced points when you just **read** your code your code (surprisingly, the instructor do know C syntax!!!).
-	  - Instead, describe your entire journey to complete the program. You must clarify why you choose the particular design you use over other alternatives, what is your key idea in implementing those features, explains your failed tries, the analysis on the causes of those failures, and how you resolved them.
-	  - Bad example: To implement page allocation, using a variable x, increase it by 2. If xx > 0, do something.
-  - Good example: To implement page allocation, I used abc. Since it is xyz, it is kkk if xyz is 99. So, to find such plm, the code iterates over cde and finds something with xxx, and increase it by 2 to indicate something for xyz. I firstly thought this was enough, but it did not work when xyz is 0xdeadbeef. So, I modified ...
+		- You may get reduced points when you just **read** your code (surprisingly, the instructor does know C syntax!!!).
+		- Instead, describe your entire journey to complete the program. You must clarify why you choose the particular design you use over other alternatives, what is your key idea in implementing those features, explains your failed tries, the analysis on the causes of those failures, and how you resolved them.
+		- Bad example: To implement page allocation, find xyz by increasing from 0 to 9999. Then increase x by 2. If xx > 0, do something.
+		- Good example: To implement page allocation, firstly I used abc properties. Since it is xyz, it is kkk if xyz is 99. So, try to find something like plm by iterating the cde list and finds something with xxx. This value is increased by 2 to indicate something for xyz. I thought this should work, but it did not when xyz is 0xdeadbeef. It turned out that xyz is not true but abc is false. So, I modified it ....
 	- Lesson learned if you have any
 	- No more than six pages
 	
