@@ -22,7 +22,7 @@ Implement a mini virtual memory system simulator.
   >> alloc 0x10 rw  # Allocate a page to VPN 0x10 for read and write
 	```
 	
-- The pages allocated with `r` option are read-only pages. Writes to those pages should be rejected. The pages allocated with `rw` can be read and written. This implies that both read and write accesses to those VPNs should be allowed.
+- The pages allocated with `r` option are read-only pages. Writes to those pages should be rejected. The pages allocated with `rw` can be read and written. This implies that both read and write accesses to those VPNs should be allowed. However, you may presume that no page will be allocated with only `w` option in this assignment (i.e., no need to support write-only pages).
 
 - Allocated pages should be mapped to the current process by manipulating the page table of the process. The system maintains 2-level hierarchical page table as defined in `vm.h`.
 
