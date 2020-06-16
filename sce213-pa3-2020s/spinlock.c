@@ -88,15 +88,8 @@ struct thread {
 };
 
 struct mutex {
-	int S;
-	int hold;
-	struct list_head queue;	
-	sigset_t sigSet;
-	siginfo_t sigInfo;
-	struct spinlock lock;
-};
 
-struct thread thread = {};
+};
 
 /*********************************************************************
  * init_mutex(@mutex)
@@ -106,11 +99,6 @@ struct thread thread = {};
  */
 void init_mutex(struct mutex *mutex)
 {
-	//init_spinlock(&mutex->lock);
-	INIT_LIST_HEAD(&mutex->queue);
-	sigaddset(&mutex->sigSet,SIGUSR2);
-	mutex->S = 1;
-	mutex->hold = 0;
 	return;
 }
 
@@ -136,19 +124,6 @@ void init_mutex(struct mutex *mutex)
  */
 void acquire_mutex(struct mutex *mutex)
 {
-	struct thread thread = {};
-	thread.pthread = pthread_self();
-	while(compare_and_swap(&mutex->hold, 0, 1));//acquire_spinlock(&mutex->lock);
-	mutex->S--;
-	if(mutex->S < 0)
-	{
-		list_add_tail(&thread.list,&mutex->queue);
-		sigprocmask(SIG_BLOCK,&mutex->sigSet,NULL);
-		//release_spinlock(&mutex->lock);
-		mutex->hold = 0;
-		sigwaitinfo(&mutex->sigSet,&mutex->sigInfo);
-	}
-	else mutex->hold = 0;//release_spinlock(&mutex->lock);
 	return;
 }
 
@@ -165,20 +140,6 @@ void acquire_mutex(struct mutex *mutex)
  */
 void release_mutex(struct mutex *mutex)
 {
-	//acquire_spinlock(&mutex->lock);
-	while(compare_and_swap(&mutex->hold, 0, 1));//acquire_spinlock(&mutex->lock);
-	mutex->S++;
-	if(mutex->S <= 0)
-	{
-		if(!list_empty(&mutex->queue))
-		{
-			struct thread *gthread = list_first_entry(&mutex->queue, struct thread, list);
-			list_del(&gthread->list); 
-			mutex->hold = 0;//release_spinlock(&mutex->lock);
-			pthread_kill(gthread->pthread,SIGUSR2); //wakeup
-		}
-	}
-	else mutex->hold = 0;//release_spinlock(&mutex->lock);
 	return;
 }
 
@@ -192,10 +153,6 @@ struct ringbuffer {
 	/**/ int nr_slots;                     /**/
 	/**/ int *slots;                       /**/
 	/*****************************************/
-	struct mutex mutex;
-	struct mutex sema;
-	struct mutex empty;
-	int in; int out; int N;
 };
 
 struct ringbuffer ringbuffer = {
@@ -209,13 +166,6 @@ struct ringbuffer ringbuffer = {
  */
 void enqueue_into_ringbuffer(int value)
 {
-	acquire_mutex(&ringbuffer.sema);
-	acquire_mutex(&ringbuffer.mutex);
-	ringbuffer.slots[ringbuffer.in] = value;
-	ringbuffer.in = (ringbuffer.in + 1) % ringbuffer.N;
-	release_mutex(&ringbuffer.mutex);
-	release_mutex(&ringbuffer.empty);
-	return;
 }
 
 
@@ -230,13 +180,7 @@ void enqueue_into_ringbuffer(int value)
  */
 int dequeue_from_ringbuffer(void)
 {
-	acquire_mutex(&ringbuffer.empty);
-	acquire_mutex(&ringbuffer.mutex);
-	int value = ringbuffer.slots[ringbuffer.out];
-	ringbuffer.out = (ringbuffer.out + 1) % ringbuffer.N;
-	release_mutex(&ringbuffer.mutex);
-	release_mutex(&ringbuffer.sema);
-	return value; 	
+	return 0;
 }
 
 
@@ -267,14 +211,6 @@ int init_ringbuffer(const int nr_slots)
 	/**/ ringbuffer.nr_slots = nr_slots;                     /**/
 	/**/ ringbuffer.slots = malloc(sizeof(int) * nr_slots);  /**/
 	/***********************************************************/
-	ringbuffer.in = 0;
-	ringbuffer.out = 0;
-	
-	init_mutex(&ringbuffer.mutex);
-	init_mutex(&ringbuffer.sema);
-	init_mutex(&ringbuffer.empty);
-	ringbuffer.N = nr_slots;
-	ringbuffer.sema.S = ringbuffer.N;
-	ringbuffer.empty.S = 0;
+
 	return 0;
 }
