@@ -85,7 +85,7 @@ To duplicate the parent's address space, set up the PTE in the child's page tabl
 - Git repository (10 bonus pts)
 	- Register http URL and with a deploy token and password.
 	- Start the repository by cloning this repository.
-	- Make sure the token is valid through June 3 (due + 4 slip days + 1 day)
+	- Make sure the token is valid through July 3 (due + 4 slip days + 1 day)
 
 - *THE INSTRUCTOR WILL NOT ANSWER THE QUESTIONS ABOUT THOSE ALREADY SPECIFIED ON THE HANDOUT.*
 - *QUESTIONS OVER EMAIL WILL BE IGNORED UNLESS IT CONCERNS YOUR PRIVACY.*
