@@ -65,7 +65,7 @@ unsigned int alloc_page(unsigned int vpn, unsigned int rw)
 	int vpn_idx = vpn%NR_PTES_PER_PAGE; //mod 16
 	if(vpn != 0) out_idx = vpn/NR_PTES_PER_PAGE;//0[0~16], 1[0(16)~16(32)]....
 	if(ptbr->outer_ptes[out_idx] == NULL) //mallocation when needs mallocation
-		ptbr->outer_ptes[out_idx] = (struct pte_directory*)malloc(sizeof(struct pte_directory)); 
+	{ ptbr->outer_ptes[out_idx] = (struct pte_directory*)malloc(sizeof(struct pte_directory)); }
 		
 	if(vpn < NR_PTES_PER_PAGE * NR_PTES_PER_PAGE)
 	{
@@ -73,23 +73,24 @@ unsigned int alloc_page(unsigned int vpn, unsigned int rw)
 		if(rw == RW_READ)//read only
 		{
 			ptbr->outer_ptes[out_idx]->ptes[vpn_idx].writable = false; 
-			ptbr->outer_ptes[out_idx]->ptes[vpn_idx].private = 0; 
+			ptbr->outer_ptes[out_idx]->ptes[vpn_idx].private = 1; 
 		}
-		else //read & write
+		else//rw
 		{	ptbr->outer_ptes[out_idx]->ptes[vpn_idx].writable = true;
-			ptbr->outer_ptes[out_idx]->ptes[vpn_idx].private = 1;
+			ptbr->outer_ptes[out_idx]->ptes[vpn_idx].private = 0;
 		}
-    
-		for(unsigned int i = 0; i < NR_PAGEFRAMES; i++)
+
+		for(unsigned int i = 0; i < NR_PAGEFRAMES; i++)//mapcount, find smallest 
 		{
 			if(mapcounts[i]) continue;
 			mapcounts[i] = 1;
-			ptbr->outer_ptes[out_idx]->ptes[vpn_idx].pfn = i;
+			current->pagetable.outer_ptes[out_idx]->ptes[vpn_idx].pfn = i;
 			break;
 		}
 
 		current->pagetable = *ptbr;
 		int qpfn = current->pagetable.outer_ptes[out_idx]->ptes[vpn_idx].pfn;
+		printf("pid %d\n", current->pid);
 		return qpfn;
 	}
 	else return -1;
@@ -107,15 +108,7 @@ unsigned int alloc_page(unsigned int vpn, unsigned int rw)
  */
 void free_page(unsigned int vpn)
 {
-	int out_idx = 0;
-	int vpn_idx = vpn%NR_PTES_PER_PAGE; //mod 16
-	if(vpn != 0) out_idx = vpn/NR_PTES_PER_PAGE;//0[0~16], 1[0(16)~16(32)]....
 
-	ptbr->outer_ptes[out_idx]->ptes[vpn_idx].valid = false; //false
-	ptbr->outer_ptes[out_idx]->ptes[vpn_idx].writable = false; 
-	ptbr->outer_ptes[out_idx]->ptes[vpn_idx].private = 0;
-	mapcounts[ptbr->outer_ptes[out_idx]->ptes[vpn_idx].pfn]--;
-	ptbr->outer_ptes[out_idx]->ptes[vpn_idx].pfn = 0;
 }
 
 
@@ -137,34 +130,8 @@ void free_page(unsigned int vpn)
  */
 bool handle_page_fault(unsigned int vpn, unsigned int rw)
 {
-	int out_idx = 0;
-	int vpn_idx = vpn%NR_PTES_PER_PAGE;
-	if(vpn != 0) out_idx = vpn/NR_PTES_PER_PAGE;
-
-	if(!ptbr->outer_ptes[out_idx]) //case 0
-		return false;
-	if(ptbr->outer_ptes[out_idx]->ptes[vpn_idx].valid == false) //case 1
-		return false;
-	if(ptbr->outer_ptes[out_idx]->ptes[vpn_idx].private == 1) //case 2, writable
-	{
-		ptbr->outer_ptes[out_idx]->ptes[vpn_idx].writable = true; 
-		
-		if(mapcounts[ptbr->outer_ptes[out_idx]->ptes[vpn_idx].pfn] != 1) //more then 2 process
-		{
-			for(unsigned int i = 0; i < NR_PAGEFRAMES; i++)
-			{
-				if(mapcounts[i]) continue;
-				mapcounts[ptbr->outer_ptes[out_idx]->ptes[vpn_idx].pfn]--;
- 				ptbr->outer_ptes[out_idx]->ptes[vpn_idx].pfn = i; //use other pfn
-				mapcounts[i]++;
-				
-				break;
-			}
-		}
-	}
-	else if(rw == RW_WRITE) //cannot write wanna write
-		return false;
-	return true; //wanna read, write on 1
+	
+	return false;
 }
 
 
@@ -187,42 +154,8 @@ bool handle_page_fault(unsigned int vpn, unsigned int rw)
  *   storing some useful information :-)
  */
 void switch_process(unsigned int pid)
-{  
-	unsigned int chpid = pid;
-	
-	list_add_tail(&(current->list), &processes); //add current in readyqueue
-	struct process *check; printf("%d\n",current->pid);
-	list_for_each_entry(check, &processes, list) //rotate
-    {
-		if(chpid == check->pid) //find same pid, then change current
-		{
-			current = check;
-			ptbr = &(current->pagetable);
-			list_del_init(&check->list); //delete new current process
-			return;
-		}
-	}
-	
-	ptbr = (struct pagetable*)malloc(sizeof(struct pagetable)); //ptbr하나 만듬
-
-	for(int i=0; i<NR_PTES_PER_PAGE; i++) 
-	{
-		if(current->pagetable.outer_ptes[i] != NULL) //new.pagetable = current->pagetable;
-		{	
-			ptbr->outer_ptes[i] = (struct pte_directory*)malloc(sizeof(struct pte_directory));
-			for(int j = 0; j<NR_PTES_PER_PAGE; j++)
-		 	{	
-				current->pagetable.outer_ptes[i]->ptes[j].writable = false; //no wirtable
-				ptbr->outer_ptes[i]->ptes[j] = current->pagetable.outer_ptes[i]->ptes[j];
-				if(current->pagetable.outer_ptes[i]->ptes[j].valid == 1) 
-					mapcounts[ptbr->outer_ptes[i]->ptes[j].pfn]++;	//mapcount up
-			}
-		}
-	}
-	
-	current = (struct process*)malloc(sizeof(struct process));
-	current->pid = chpid;
-	current->pagetable = *ptbr;
-
-	ptbr = &(current->pagetable); //set now ptbr
+{
+ 
+	//page 하나 만들고, 
+	// switch 1 지금 똑같은애만들고
 }

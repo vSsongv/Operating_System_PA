@@ -84,7 +84,7 @@ unsigned int alloc_page(unsigned int vpn, unsigned int rw)
 		{
 			if(mapcounts[i]) continue;
 			mapcounts[i] = 1;
-			ptbr->outer_ptes[out_idx]->ptes[vpn_idx].pfn = i;
+			current->pagetable.outer_ptes[out_idx]->ptes[vpn_idx].pfn = i;
 			break;
 		}
 
@@ -107,15 +107,7 @@ unsigned int alloc_page(unsigned int vpn, unsigned int rw)
  */
 void free_page(unsigned int vpn)
 {
-	int out_idx = 0;
-	int vpn_idx = vpn%NR_PTES_PER_PAGE; //mod 16
-	if(vpn != 0) out_idx = vpn/NR_PTES_PER_PAGE;//0[0~16], 1[0(16)~16(32)]....
 
-	ptbr->outer_ptes[out_idx]->ptes[vpn_idx].valid = false; //false
-	ptbr->outer_ptes[out_idx]->ptes[vpn_idx].writable = false; 
-	ptbr->outer_ptes[out_idx]->ptes[vpn_idx].private = 0;
-	mapcounts[ptbr->outer_ptes[out_idx]->ptes[vpn_idx].pfn]--;
-	ptbr->outer_ptes[out_idx]->ptes[vpn_idx].pfn = 0;
 }
 
 
@@ -148,23 +140,26 @@ bool handle_page_fault(unsigned int vpn, unsigned int rw)
 	if(ptbr->outer_ptes[out_idx]->ptes[vpn_idx].private == 1) //case 2, writable
 	{
 		ptbr->outer_ptes[out_idx]->ptes[vpn_idx].writable = true; 
-		
-		if(mapcounts[ptbr->outer_ptes[out_idx]->ptes[vpn_idx].pfn] != 1) //more then 2 process
+
+		mapcounts[ptbr->outer_ptes[out_idx]->ptes[vpn_idx].pfn]--;
+		if(mapcounts[ptbr->outer_ptes[out_idx]->ptes[vpn_idx].pfn] == 1)
+		{
+			mapcounts[ptbr->outer_ptes[out_idx]->ptes[vpn_idx].pfn]++;
+		}
+		else 
 		{
 			for(unsigned int i = 0; i < NR_PAGEFRAMES; i++)
 			{
 				if(mapcounts[i]) continue;
-				mapcounts[ptbr->outer_ptes[out_idx]->ptes[vpn_idx].pfn]--;
- 				ptbr->outer_ptes[out_idx]->ptes[vpn_idx].pfn = i; //use other pfn
+				ptbr->outer_ptes[out_idx]->ptes[vpn_idx].pfn = i; //write other pfn
 				mapcounts[i]++;
-				
 				break;
 			}
 		}
 	}
 	else if(rw == RW_WRITE) //cannot write wanna write
 		return false;
-	return true; //wanna read, write on 1
+	return true; //wanna read
 }
 
 
@@ -188,26 +183,26 @@ bool handle_page_fault(unsigned int vpn, unsigned int rw)
  */
 void switch_process(unsigned int pid)
 {  
-	unsigned int chpid = pid;
+	unsigned int chpid = pid; printf("???"); printf("%d\n",chpid);
 	
 	list_add_tail(&(current->list), &processes); //add current in readyqueue
 	struct process *check; printf("%d\n",current->pid);
 	list_for_each_entry(check, &processes, list) //rotate
     {
 		if(chpid == check->pid) //find same pid, then change current
-		{
+		{printf("5");
 			current = check;
 			ptbr = &(current->pagetable);
 			list_del_init(&check->list); //delete new current process
 			return;
 		}
-	}
+	}printf("여기");
 	
 	ptbr = (struct pagetable*)malloc(sizeof(struct pagetable)); //ptbr하나 만듬
 
 	for(int i=0; i<NR_PTES_PER_PAGE; i++) 
 	{
-		if(current->pagetable.outer_ptes[i] != NULL) //new.pagetable = current->pagetable;
+		if(current->pagetable.outer_ptes[i]) //new.pagetable = current->pagetable;
 		{	
 			ptbr->outer_ptes[i] = (struct pte_directory*)malloc(sizeof(struct pte_directory));
 			for(int j = 0; j<NR_PTES_PER_PAGE; j++)
