@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 ## Project #1: My Smart Shell
 
 ### *** Due on 11:59:59pm, April 26 (Sunday)***
@@ -223,8 +222,3 @@ Each directory is separated by `:`. For example, if `PATH=/usr/bin:./bin:./sce21
 	- The repository will be checked (at least) twice, during the registration and after the submission deadline. The status will be updated accordingly.
 - Free to make a question through AjouBb. However, YOU MIGHT NOT GET AN ANSWER IF THE QUESTIONS ARE ABOUT THOSE ALREADY SPECIFIED ON THIS HANDOUT.
 - QUESTIONS OVER EMAIL WILL BE IGNORED unless it concerns your privacy.
-=======
-# OS_PA1_My_Smart_Shell
-
-Programming Assignment of Operating System.
->>>>>>> 4928bbeb0c4ab93edb0f4e04c17e4dcfd842f5d8
